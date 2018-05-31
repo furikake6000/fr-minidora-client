@@ -2,8 +2,15 @@ import sys
 import time
 import readchar
 import concurrent.futures
+import os
+import inspect
+import importlib
+import glob
 
 from modules.actions.randomMove import RandomMove
+
+def my_capitalize(str):
+    return (str[0]).upper() + str[1:]
 
 def key_and_run(config):
     while(True):
@@ -29,9 +36,22 @@ def update(action):
 if __name__ == "__main__":
     exe = concurrent.futures.ThreadPoolExecutor(max_workers=10)
     
-    action = RandomMove()
+    # Making action instances for each files in modules/actions
+    actions_obj = []
+    for f in glob.glob(os.path.join("modules/actions", "*.py")):
+        # Loading each files as module
+        classname = os.path.splitext(os.path.basename(f))[0]
+        m = importlib.import_module("modules.actions.{}".format(classname))
+        # Loading classes written in files
+        print(my_capitalize(classname))
+        actions_obj += [c for c in inspect.getmembers(m, inspect.isclass) if c[0] == my_capitalize(classname)]
+    
+    actions = [o[1]() for o in actions_obj if o[0] != 'Action']
+
+    print(actions)
+
     config = {
-        action: ["w", "s"]
+        actions[0]: ["w", "s"]
     }
     exe.submit(key_and_run, config)
-    exe.submit(update, action)
+    exe.submit(update, actions[0])
